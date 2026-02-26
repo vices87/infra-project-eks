@@ -1,0 +1,32 @@
+autoDiscovery:
+  clusterName: ""   
+awsRegion: ""       
+
+rbac:
+  serviceAccount:
+    create: true
+    name: cluster-autoscaler
+
+extraArgs:
+  skip-nodes-with-local-storage: false
+  skip-nodes-with-system-pods: false
+  expander: least-waste
+  balance-similar-node-groups: true
+  scale-down-enabled: true
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 300Mi
+  requests:
+    cpu: 100m
+    memory: 300Mi
+
+nodeSelector:
+  x86: "true"
+
+tolerations:
+  - key: "x86_only"
+    operator: "Equal"
+    value: "enabled"
+    effect: "NoSchedule"

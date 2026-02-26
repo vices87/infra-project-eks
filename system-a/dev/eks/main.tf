@@ -1,0 +1,158 @@
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.15.1"
+
+  # Config EKS
+  name                           = var.name
+  kubernetes_version             = var.cluster_version
+  endpoint_public_access         = var.public_access
+
+  enable_irsa = true
+
+  # Addons
+  addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    aws-ebs-csi-driver = {
+      most_recent = false
+    }
+    aws-efs-csi-driver = {
+      most_recent = false
+    }
+  }
+
+  # Network
+  vpc_id                   = data.aws_vpc.selected.id
+  subnet_ids               = data.aws_subnets.selected.ids
+  control_plane_subnet_ids = data.aws_subnets.selected.ids
+
+
+  ## Logs
+  create_cloudwatch_log_group = true
+  enabled_log_types = var.cluster_enabled_log_types
+
+  #Regras SG do cluster (control plane)
+  security_group_additional_rules = {
+    office_api = {
+      description              = "Rede AWS"
+      protocol                 = "-1"
+      from_port                = 0
+      to_port                  = 0
+      type                     = "ingress"
+      source_node_security_group = false
+      cidr_blocks = [
+        "10.0.0.0/8",
+      ]
+    }
+  }
+
+  # ACCESS ENTRIES
+  #authentication_mode:
+  #API - usa access entries para gerenciar permissoes
+  #CONFIG_MAP - legacy - usa aws-auth ConfigMap dentro do cluster
+  #API_AND_CONFIG_MAP - hibrido funciona modo aws-auth(velho) e Access Entries(novo)
+
+  authentication_mode = "API"
+
+  enable_cluster_creator_admin_permissions = true
+
+  access_entries = {
+    infra_sre = {
+      principal_arn = data.aws_iam_role.infra_sre.arn
+
+      policy_associations = {
+        exemplo = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            #namespaces = ["default"]
+            #type       = "namespace"
+            type = "cluster" #acesso cluster inteiro
+          }
+        }
+      }
+    }
+  }
+
+  #   enable_bootstrap_user_data = false
+  #   pre_bootstrap_user_data    = data.template_file.pre_bootstrap_user_data.rendered
+  #   bootstrap_extra_args       = "--container-runtime containerd --kubelet-extra-args '--max-pods=110'"
+
+  # Config for nodes groups
+  eks_managed_node_groups = {
+
+    "${var.name}-x86" = {
+      ami_type       = "AL2023_x86_64_STANDARD"
+      min_size       = 1
+      max_size       = 10
+      desired_size   = 1
+      instance_types = ["m6a.xlarge"]
+      capacity_type  = "SPOT"
+
+      create_iam_role = false
+      iam_role_arn   = data.aws_iam_role.iam_node_role.arn
+      #iam_role_additional_policies = {
+      #additional = aws_iam_policy.additional.arn,
+      #}
+
+      key_name       = var.key_name
+
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size           = 50
+            volume_type           = "gp3"
+            delete_on_termination = true
+          }
+        }
+      }
+
+      labels = {
+        x86 = true
+      }
+
+      taints = {
+        x86_only = {
+          key = "x86_only"
+          value = "enabled"
+          effect = "NO_SCHEDULE"
+        }
+      }
+
+      tags = merge(
+       var.tags, {
+         "k8s.io/cluster-autoscaler/enabled"                    = true
+         "k8s.io/cluster-autoscaler/${module.eks.cluster_name}" = "owned"
+       }
+     )
+
+    }
+  }
+
+  #regra sg dos nodes
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Rede AWS"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      cidr_blocks = [
+        "10.0.0.0/8",
+        "100.0.0.0/8"
+      ]
+    }
+  }
+
+  # Additional Policies
+  iam_role_additional_policies = {
+    additional = aws_iam_policy.additional.arn
+  }
+
+  # Boundary
+  iam_role_permissions_boundary = data.aws_iam_policy.policy_boundary.arn
+}
