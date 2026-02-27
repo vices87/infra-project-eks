@@ -7,6 +7,7 @@ module "eks" {
   kubernetes_version             = var.cluster_version
   endpoint_public_access         = var.public_access
 
+  # O modulo ja cria o IRSA e OIDC provider junto se habilitar
   enable_irsa = true
 
   # Addons
@@ -50,12 +51,10 @@ module "eks" {
     }
   }
 
-  # ACCESS ENTRIES
-  #authentication_mode:
-  #API - usa access entries para gerenciar permissoes
-  #CONFIG_MAP - legacy - usa aws-auth ConfigMap dentro do cluster
-  #API_AND_CONFIG_MAP - hibrido funciona modo aws-auth(velho) e Access Entries(novo)
-
+  # ACCESS ENTRIES 
+  # API - usa access entries para gerenciar permissoes (policies gerenciadas da AWS)
+  # CONFIG_MAP - legacy - usa aws-auth ConfigMap (modo antigo)
+  # API_AND_CONFIG_MAP - hibrido funciona modo aws-auth e Access Entries
   authentication_mode = "API"
 
   enable_cluster_creator_admin_permissions = true

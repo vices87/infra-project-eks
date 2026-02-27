@@ -1,0 +1,39 @@
+name: register-eks-in-argocd
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Assume Role na conta do EKS
+      - name: Assume Role in EKS account
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<ACCOUNT_B>:role/EKSAccessRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get kubeconfig
+        run: |
+          aws eks update-kubeconfig --name eks-dev --region ${{ env.AWS_REGION }}
+
+      # Assume Role na conta do ArgoCD
+      - name: Assume Role in ArgoCD account
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::1111111111:role/ArgoCDAdminRole #role fixa pois argocd centralizado em uma conta
+          aws-region: us-east-1 # fixo
+
+      - name: Register cluster in ArgoCD
+        run: |
+          argocd cluster add $(kubectl config current-context) --yes
+
+      - name: Sync App-of-Apps
+        run: |
+          argocd app sync infra-root
