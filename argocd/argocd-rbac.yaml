@@ -1,0 +1,490 @@
+# ============================================================
+# 1. CLUSTERROLE — permissões no escopo do cluster inteiro
+# ============================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: readonly
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "endpoints", "namespaces", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: developer
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ops
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets",
+              "persistentvolumeclaims", "serviceaccounts"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+# ============================================================
+# 2. CLUSTERROLEBINDING — vincula ClusterRole a subjects
+#    no escopo do cluster inteiro
+#
+#    No caso AWS sem Azure AD, o subject vem do Access Entry:
+#
+#    access_entries = {
+#      ops = {
+#        principal_arn     = "arn:aws:iam::123456789:role/ops-role"
+#        kubernetes_groups = ["ops"]   ← esse é o name abaixo
+#      }
+#    }
+# ============================================================
+
+# Vinculando por Group (recomendado — vem do kubernetes_groups do Access Entry)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ops-binding
+subjects:
+- kind: Group
+  name: ops                         # kubernetes_groups do Access Entry
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: ops
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Vinculando por User (vem do username do Access Entry)
+#
+#    access_entries = {
+#      sre = {
+#        principal_arn = "arn:aws:iam::123456789:role/sre-role"
+#        username      = "sre-user"   ← esse é o name abaixo
+#      }
+#    }
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sre-readonly
+subjects:
+- kind: User
+  name: sre-user                    # username do Access Entry
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: readonly
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Vinculando por ServiceAccount (para workloads, não humanos)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-admin
+subjects:
+- kind: ServiceAccount
+  name: argocd                      # nome da ServiceAccount
+  namespace: argocd                 # namespace onde a SA foi criada
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin               # builtin do Kubernetes
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================================
+# 3. ROLE — permissões restritas a um namespace específico
+# ============================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer
+  namespace: dev
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: readonly
+  namespace: prod
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ============================================================
+# 4. ROLEBINDING — vincula Role ou ClusterRole a subjects
+#    mas restrito a um namespace
+# ============================================================
+
+# Group + Role (escopo namespace)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: devs-developer
+  namespace: dev
+subjects:
+- kind: Group
+  name: devs                        # kubernetes_groups do Access Entry
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role                        # Role local do namespace
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Group + ClusterRole via RoleBinding (reutiliza ClusterRole mas restringe ao namespace)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: devs-readonly-prod
+  namespace: prod
+subjects:
+- kind: Group
+  name: devs
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole                 # reusa ClusterRole mas só nesse namespace
+  name: readonly
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# User + Role (escopo namespace)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-user-staging
+  namespace: staging
+subjects:
+- kind: User
+  name: dev-user                    # username do Access Entry
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ServiceAccount + Role (escopo namespace — comum para workloads)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-sa-binding
+  namespace: dev
+subjects:
+- kind: ServiceAccount
+  name: minha-app                   # ServiceAccount da aplicação
+  namespace: dev
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================================
+# 5. SERVICEACCOUNT — identidade para workloads
+# ============================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: minha-app
+  namespace: dev
+  annotations:
+    # IRSA — permite que a SA assuma uma IAM Role via OIDC
+    eks.amazonaws.com/role-arn: "arn:aws:iam::123456789:role/minha-app-role"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd
+  namespace: argocd
+  
+
+  # Lista completa de opcoes:
+  #
+  # resources:
+  #   # Workloads
+  #   - pods
+  #   - pods/log           # logs do container
+  #   - pods/exec          # kubectl exec
+  #   - pods/portforward   # kubectl port-forward
+  #   - pods/status        # status do pod
+  #   - pods/attach        # attach ao container
+
+  #   # Configuração
+  #   - configmaps
+  #   - secrets
+
+  #   # Rede
+  #   - services
+  #   - endpoints
+
+  #   # Armazenamento
+  #   - persistentvolumes
+  #   - persistentvolumeclaims
+
+  #   # Identidade
+  #   - serviceaccounts
+
+  #   # Organização
+  #   - namespaces
+  #   - nodes
+  #   - events
+  #   - resourcequotas
+  #   - limitranges
+
+  #   # Replicação (legado)
+  #   - replicationcontrollers
+
+  #
+  # verbs:
+  # # Leitura
+  # - get        # busca um recurso específico pelo nome
+  # - list       # lista todos os recursos
+  # - watch      # observa mudanças em tempo real (usado por controllers)
+
+  # # Escrita
+  # - create     # cria um novo recurso
+  # - update     # atualiza o recurso inteiro (substitui)
+  # - patch      # atualiza parcialmente o recurso
+  # - delete     # deleta um recurso específico
+  # - deletecollection  # deleta múltiplos recursos de uma vez
+
+  # # Especial
+  # - use        # usado em PodSecurityPolicy (legado)
+  # - bind       # permite criar RoleBindings para uma Role
+  # - escalate   # permite criar Roles com permissões maiores que as suas
+  # - impersonate  # permite agir como outro usuário/grupo (perigoso)
+  # - approve    # aprovar CertificateSigningRequests
+  # - sign       # assinar certificados
+
+  # # Curinga
+  # - "*"        # todos os verbs
+
+
+
+#   rules:
+# # ============================================================
+# # Core API — apiGroup ""
+# # ============================================================
+# - apiGroups: [""]
+#   resources:
+#     - pods
+#     - pods/log
+#     - pods/exec
+#     - pods/portforward
+#     - pods/status
+#     - pods/attach
+#     - configmaps
+#     - secrets
+#     - services
+#     - endpoints
+#     - persistentvolumes
+#     - persistentvolumeclaims
+#     - serviceaccounts
+#     - namespaces
+#     - nodes
+#     - events
+#     - resourcequotas
+#     - limitranges
+#     - replicationcontrollers
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # apps
+# # ============================================================
+# - apiGroups: ["apps"]
+#   resources:
+#     - deployments
+#     - statefulsets
+#     - daemonsets
+#     - replicasets
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # batch
+# # ============================================================
+# - apiGroups: ["batch"]
+#   resources:
+#     - jobs
+#     - cronjobs
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # networking.k8s.io
+# # ============================================================
+# - apiGroups: ["networking.k8s.io"]
+#   resources:
+#     - ingresses
+#     - ingressclasses
+#     - networkpolicies
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # rbac.authorization.k8s.io
+# # ============================================================
+# - apiGroups: ["rbac.authorization.k8s.io"]
+#   resources:
+#     - roles
+#     - rolebindings
+#     - clusterroles
+#     - clusterrolebindings
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # autoscaling
+# # ============================================================
+# - apiGroups: ["autoscaling"]
+#   resources:
+#     - horizontalpodautoscalers
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # policy
+# # ============================================================
+# - apiGroups: ["policy"]
+#   resources:
+#     - poddisruptionbudgets
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # storage.k8s.io
+# # ============================================================
+# - apiGroups: ["storage.k8s.io"]
+#   resources:
+#     - storageclasses
+#     - volumeattachments
+#     - csidrivers
+#     - csinodes
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # apiextensions.k8s.io
+# # ============================================================
+# - apiGroups: ["apiextensions.k8s.io"]
+#   resources:
+#     - customresourcedefinitions
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # admissionregistration.k8s.io
+# # ============================================================
+# - apiGroups: ["admissionregistration.k8s.io"]
+#   resources:
+#     - mutatingwebhookconfigurations
+#     - validatingwebhookconfigurations
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # coordination.k8s.io
+# # ============================================================
+# - apiGroups: ["coordination.k8s.io"]
+#   resources:
+#     - leases
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # metrics.k8s.io
+# # ============================================================
+# - apiGroups: ["metrics.k8s.io"]
+#   resources:
+#     - nodes
+#     - pods
+#   verbs: ["get", "list"]
+
+# # ============================================================
+# # argoproj.io
+# # ============================================================
+# - apiGroups: ["argoproj.io"]
+#   resources:
+#     - applications
+#     - appprojects
+#     - applicationsets
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # cert-manager.io
+# # ============================================================
+# - apiGroups: ["cert-manager.io"]
+#   resources:
+#     - certificates
+#     - issuers
+#     - clusterissuers
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # externaldns.k8s.io
+# # ============================================================
+# - apiGroups: ["externaldns.k8s.io"]
+#   resources:
+#     - dnsendpoints
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+# # ============================================================
+# # karpenter.sh
+# # ============================================================
+# - apiGroups: ["karpenter.sh"]
+#   resources:
+#     - nodepools
+#     - nodeclaims
+#   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

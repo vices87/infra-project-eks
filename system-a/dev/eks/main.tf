@@ -11,20 +11,25 @@ module "eks" {
   enable_irsa = true
 
   # Addons
-  addons = {
-    coredns = {
-      most_recent = true
+    addons = {
+      coredns = {
+        most_recent = true
+      }
+      kube-proxy = {
+        most_recent = true
+      }
+      aws-ebs-csi-driver = {
+        most_recent = false
+      }
+      aws-efs-csi-driver = {
+        most_recent = false
+      }
+      aws-load-balancer-controller = {
+        most_recent = false
+        # version = "v2.6.0-eksbuild.1" # usar false e especificar versão para usar versao especifica
+      }
     }
-    kube-proxy = {
-      most_recent = true
-    }
-    aws-ebs-csi-driver = {
-      most_recent = false
-    }
-    aws-efs-csi-driver = {
-      most_recent = false
-    }
-  }
+  
 
   # Network
   vpc_id                   = data.aws_vpc.selected.id
@@ -60,9 +65,16 @@ module "eks" {
   enable_cluster_creator_admin_permissions = true
 
   access_entries = {
+
+    dev = {
+      principal_arn     = "arn:aws:iam::123456789:role/dev-role"
+      # username          = "dev-user" # opcional - mostra no log o username no lugar do arn
+      kubernetes_groups = ["devs"]
+    }
+
+    # Com policy gerenciada da AWS:
     infra_sre = {
       principal_arn = data.aws_iam_role.infra_sre.arn
-
       policy_associations = {
         exemplo = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -114,13 +126,13 @@ module "eks" {
         x86 = true
       }
 
-      taints = {
-        x86_only = {
-          key = "x86_only"
-          value = "enabled"
-          effect = "NO_SCHEDULE"
-        }
-      }
+      # taints = {
+      #   x86_only = {
+      #     key = "x86_only"
+      #     value = "enabled"
+      #     effect = "NO_SCHEDULE"
+      #   }
+      # }
 
       tags = merge(
        var.tags, {
@@ -155,3 +167,48 @@ module "eks" {
   # Boundary
   iam_role_permissions_boundary = data.aws_iam_policy.policy_boundary.arn
 }
+
+###############################
+# RBAC no TF (não recomendado)
+###############################
+#
+# provider "kubernetes" {
+#   host                   = module.eks.cluster_endpoint
+#   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+#   exec {
+#     api_version = "client.authentication.k8s.io/v1beta1"
+#     command     = "aws"
+#     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#   }
+# }
+
+# resource "kubernetes_cluster_role" "dev" {
+#   metadata {
+#     name = "dev-role"
+#   }
+
+#   rule {
+#     api_groups = ["", "apps"]
+#     resources  = ["pods", "deployments", "services"]
+#     verbs      = ["get", "list", "watch", "create", "update"]
+#   }
+# }
+
+# resource "kubernetes_cluster_role_binding" "devs" {
+#   metadata {
+#     name = "devs-binding"
+#   }
+
+#   role_ref {
+#     api_group = "rbac.authorization.k8s.io"
+#     kind      = "ClusterRole"
+#     name      = kubernetes_cluster_role.dev.metadata[0].name
+#   }
+
+#   subject {
+#     kind      = "Group"
+#     name      = "devs"
+#     api_group = "rbac.authorization.k8s.io"
+#   }
+# }
