@@ -77,10 +77,6 @@ module "eks" {
       desired_size   = var.node_desired_size
       instance_types = var.node_instance_types
       capacity_type  = var.node_capacity_type
-
-      pre_bootstrap_user_data = data.template_file.pre_bootstrap_user_data.rendered
-      bootstrap_extra_args = "--kubelet-extra-args '--max-pods=100'"
-
       create_iam_role = var.create_node_iam_role
       iam_role_arn   = data.aws_iam_role.iam_node_role.arn
       iam_role_additional_policies = {

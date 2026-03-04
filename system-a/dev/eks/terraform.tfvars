@@ -1,6 +1,10 @@
+###
+# DEV
+###
+
 # Assume Role
 aws_region      = "sa-east-1"
-assume_role_arn = "arn:aws:iam::111111111111:role/TerraformRole"
+assume_role_arn = ""
 
 # Cluster Config
 name            = "eks-dev"
@@ -42,7 +46,6 @@ node_max_size        = 3
 node_desired_size    = 1
 node_instance_types  = ["t3.medium"]
 node_capacity_type   = "SPOT"
-node_max_pods        = 110
 node_disk_size       = 50
 node_disk_type       = "gp3"
 
