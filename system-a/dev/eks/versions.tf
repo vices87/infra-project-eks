@@ -9,9 +9,10 @@ terraform {
   }
   
   backend "s3" {
-    # bucket = "org-terraform-state"
-    # key    = "org/env-prd/eks/terraform.tfstate"
-    # region = "sa-east-1"
+    # pass via atlantis
+    # bucket = ""
+    # key    = "example/terraform.tfstate"
+    # region = ""
   }
 }
 

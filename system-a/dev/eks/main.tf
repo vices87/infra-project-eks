@@ -7,41 +7,22 @@ module "eks" {
   kubernetes_version             = var.cluster_version
   endpoint_public_access         = var.public_access
 
-  # O modulo ja cria o IRSA e OIDC provider junto se habilitar
-  enable_irsa = true
+  # O modulo ja cria o IRSA + OIDC provider junto se habilitar
+  enable_irsa = var.enable_irsa
 
   # Addons
-    addons = {
-      coredns = {
-        most_recent = true
-      }
-      kube-proxy = {
-        most_recent = true
-      }
-      aws-ebs-csi-driver = {
-        most_recent = false
-      }
-      aws-efs-csi-driver = {
-        most_recent = false
-      }
-      aws-load-balancer-controller = {
-        most_recent = false
-        # version = "v2.6.0-eksbuild.1" # usar false e especificar versão para usar versao especifica
-      }
-    }
-  
+  addons = var.cluster_addons
 
   # Network
   vpc_id                   = data.aws_vpc.selected.id
   subnet_ids               = data.aws_subnets.selected.ids
   control_plane_subnet_ids = data.aws_subnets.selected.ids
 
-
   ## Logs
-  create_cloudwatch_log_group = true
+  create_cloudwatch_log_group = var.cloudwatch_log_group
   enabled_log_types = var.cluster_enabled_log_types
 
-  #Regras SG do cluster (control plane)
+  # Regras SG do cluster (control plane)
   security_group_additional_rules = {
     office_api = {
       description              = "Rede AWS"
@@ -61,9 +42,7 @@ module "eks" {
   # CONFIG_MAP - legacy - usa aws-auth ConfigMap (modo antigo)
   # API_AND_CONFIG_MAP - hibrido funciona modo aws-auth e Access Entries
   authentication_mode = "API"
-
   enable_cluster_creator_admin_permissions = true
-
   access_entries = {
 
     dev = {
@@ -88,58 +67,48 @@ module "eks" {
     }
   }
 
-  #   enable_bootstrap_user_data = false
-  #   pre_bootstrap_user_data    = data.template_file.pre_bootstrap_user_data.rendered
-  #   bootstrap_extra_args       = "--container-runtime containerd --kubelet-extra-args '--max-pods=110'"
-
   # Config for nodes groups
   eks_managed_node_groups = {
 
     "${var.name}-x86" = {
-      ami_type       = "AL2023_x86_64_STANDARD"
-      min_size       = 1
-      max_size       = 10
-      desired_size   = 1
-      instance_types = ["m6a.xlarge"]
-      capacity_type  = "SPOT"
+      ami_type       = var.node_ami_type
+      min_size       = var.node_min_size
+      max_size       = var.node_max_size
+      desired_size   = var.node_desired_size
+      instance_types = var.node_instance_types
+      capacity_type  = var.node_capacity_type
 
-      create_iam_role = false
+      pre_bootstrap_user_data = data.template_file.pre_bootstrap_user_data.rendered
+      bootstrap_extra_args = "--kubelet-extra-args '--max-pods=100'"
+
+      create_iam_role = var.create_node_iam_role
       iam_role_arn   = data.aws_iam_role.iam_node_role.arn
-      #iam_role_additional_policies = {
-      #additional = aws_iam_policy.additional.arn,
-      #}
+      iam_role_additional_policies = {
+      additional = aws_iam_policy.additional.arn,
+      }
 
-      key_name       = var.key_name
+    # key pair para SSH, melhor usar SSM
+    # key_name       = var.key_name
 
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size           = 50
-            volume_type           = "gp3"
+            volume_size           = var.node_disk_size
+            volume_type           = var.node_disk_type
             delete_on_termination = true
           }
         }
       }
 
-      labels = {
-        x86 = true
-      }
+      labels = var.node_labels
+      taints = var.node_taints
 
-      # taints = {
-      #   x86_only = {
-      #     key = "x86_only"
-      #     value = "enabled"
-      #     effect = "NO_SCHEDULE"
-      #   }
-      # }
-
+    # merge das tags com o locals do cluster_autoscaler
       tags = merge(
-       var.tags, {
-         "k8s.io/cluster-autoscaler/enabled"                    = true
-         "k8s.io/cluster-autoscaler/${module.eks.cluster_name}" = "owned"
-       }
-     )
+        var.tags,
+        local.autoscaler_tags
+      )
 
     }
   }
@@ -154,7 +123,6 @@ module "eks" {
       type        = "ingress"
       cidr_blocks = [
         "10.0.0.0/8",
-        "100.0.0.0/8"
       ]
     }
   }

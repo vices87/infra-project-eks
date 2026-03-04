@@ -1,6 +1,4 @@
-# ----------------------------------------
-# Cluster
-# ----------------------------------------
+
 output "cluster_name" {
   description = "Nome do cluster EKS"
   value       = module.eks.cluster_name
@@ -26,9 +24,7 @@ output "cluster_certificate_authority_data" {
   value       = module.eks.cluster_certificate_authority_data
 }
 
-# ----------------------------------------
-# Security Groups
-# ----------------------------------------
+
 output "cluster_security_group_id" {
   description = "ID do security group do cluster EKS"
   value       = module.eks.cluster_security_group_id
@@ -39,9 +35,7 @@ output "node_security_group_id" {
   value       = module.eks.node_security_group_id
 }
 
-# ----------------------------------------
-# IAM
-# ----------------------------------------
+
 output "cluster_iam_role_name" {
   description = "Nome da IAM role do cluster EKS"
   value       = module.eks.cluster_iam_role_name
@@ -52,9 +46,7 @@ output "cluster_iam_role_arn" {
   value       = module.eks.cluster_iam_role_arn
 }
 
-# ----------------------------------------
-# Node Groups
-# ----------------------------------------
+
 output "eks_managed_node_groups" {
   description = "Map dos managed node groups e seus atributos"
   value       = module.eks.eks_managed_node_groups
@@ -65,9 +57,7 @@ output "eks_managed_node_groups_autoscaling_group_names" {
   value       = module.eks.eks_managed_node_groups_autoscaling_group_names
 }
 
-# ----------------------------------------
-# OIDC
-# ----------------------------------------
+
 output "oidc_provider" {
   description = "OIDC provider do cluster"
   value       = module.eks.oidc_provider

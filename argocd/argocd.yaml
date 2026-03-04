@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: myapp-dev
+  name: eks-dev-components
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:seu-usuario/seu-repo.git'
+    repoURL: 'git@github.com:seu-usuario/infra.git'
     targetRevision: main
-    path: manifests/dev
+    path: dev/components
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: myapp-dev
+    server: 'https://<DEV-EKS-ENDPOINT>'
+    namespace: kube-system
   syncPolicy:
     automated:
       prune: true
@@ -21,17 +21,17 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: myapp-stage
+  name: eks-stage-components
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:seu-usuario/seu-repo.git'
+    repoURL: 'git@github.com:seu-usuario/infra.git'
     targetRevision: main
-    path: manifests/stage
+    path: stage/components
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: myapp-stage
+    server: 'https://<STAGE-EKS-ENDPOINT>'
+    namespace: kube-system
   syncPolicy:
     automated:
       prune: true
@@ -41,17 +41,17 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: myapp-prod
+  name: eks-prod-components
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:seu-usuario/seu-repo.git'
+    repoURL: 'git@github.com:seu-usuario/infra.git'
     targetRevision: main
-    path: manifests/prod
+    path: prod/components
   destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: myapp-prod
+    server: 'https://<PROD-EKS-ENDPOINT>'
+    namespace: kube-system
   syncPolicy:
     automated:
       prune: true
