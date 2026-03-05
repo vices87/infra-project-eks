@@ -1,6 +1,4 @@
-###
 # DEV
-###
 
 # Assume Role
 aws_region      = "sa-east-1"

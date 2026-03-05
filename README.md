@@ -95,15 +95,62 @@ services/
 Escala automática de nodes baseado em demanda
 
 
-UNDER DEVELOPMENT:
-
 🔹 prometheus
 
-Coleta de métricas do cluster
+Coleta de métricas do cluster via Helm chart oficial (prometheus-community/prometheus)
+
+- Helm Provider: hashicorp/helm ~> 3.0
+- Chart: prometheus-community/prometheus v25.8.0
+- Namespace: monitoring
+- Autenticação no EKS via data source aws_eks_cluster + aws_eks_cluster_auth
+- Componentes habilitados: prometheus-server, alertmanager, node-exporter, kube-state-metrics
+- Storage: PersistentVolume com StorageClass gp3
+- Retenção de dados: 7 dias (DEV)
+- Labels externas dinâmicas: cluster e environment via variáveis Terraform
+
+Estrutura:
+
+prometheus/
+ ├── main.tf
+ ├── variables.tf
+ ├── outputs.tf
+ ├── versions.tf
+ ├── providers.tf
+ ├── data.tf
+ └── values.yaml
+
+###
 
 🔹 grafana
 
-Visualização e monitoramento
+Visualização e monitoramento via Helm chart oficial (grafana-community/grafana)
+
+- Helm Provider: hashicorp/helm ~> 3.0
+- Chart: grafana-community/grafana v8.11.4 (Grafana 11.6.0)
+- Namespace: monitoring
+- Autenticação no EKS via data source aws_eks_cluster + aws_eks_cluster_auth
+- Credenciais (adminUser/adminPassword) buscadas do AWS Secrets Manager — não expostas no state
+- Datasource: Prometheus configurado automaticamente como default
+- Storage: PersistentVolume com StorageClass gp3
+- Dashboards pré-configurados: Kubernetes Cluster (7249) e Node Exporter (1860)
+
+Formato do secret no Secrets Manager:
+
+{
+  "username": "admin",
+  "password": "suasenhaaqui"
+}
+
+Estrutura:
+
+grafana/
+ ├── main.tf
+ ├── variables.tf
+ ├── outputs.tf
+ ├── versions.tf
+ ├── providers.tf
+ ├── data.tf
+ └── values.yaml
 
 🔹 HPA
 
@@ -112,13 +159,22 @@ Visualização e monitoramento
 
 # Pré requisito - Configuração de OIDC para GitHub Actions na AWS
 
-Conta AWS:
 
-OIDC:
 
-O OIDC permite que o GitHub Actions assuma uma IAM Role temporária na AWS, sem necessidade de armazenar AWS_ACCESS_KEY_ID ou AWS_SECRET_ACCESS_KEY como secrets no repositório.
+Conta shared-services: 
+  - criar dynamodb table para state lock
+  - criar bucket s3 para armazenamento de statefile das contas centralizado
+  - criar repositorio ECR centralizado
+  - criar argocd centralizado
 
-Fluxo: 
+
+Conta de cada produto:
+
+- Backend do Terraform de cada ambiente é configurado para utilizar o S3 e DynamoDB lock centralizado da conta shared
+
+- OIDC: O OIDC permite que o GitHub Actions assuma uma IAM Role temporária na AWS, sem necessidade de armazenar AWS_ACCESS_KEY_ID ou AWS_SECRET_ACCESS_KEY como secrets no repositório.
+
+Fluxo OIDC: 
 1. O GitHub gera um token OIDC temporário
 2. A AWS valida esse token através de um Identity Provider OIDC configurado na conta
 3. O GitHub Actions assume uma IAM Role específica
@@ -136,6 +192,8 @@ Provider type: OpenID Connect
 
 Criar uma IAM Role com:
 
-Trust policy permitindo o GitHub assumir a role
+- Trust policy permitindo o GitHub assumir a role
+- Permissões necessárias para o projeto (ex: ECR, EKS, Terraform, etc.)
 
-Permissões necessárias para o projeto (ex: ECR, EKS, Terraform, etc.)
+
+
