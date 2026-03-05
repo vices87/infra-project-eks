@@ -1,0 +1,59 @@
+fullnameOverride: prometheus
+
+server:
+  retention: "7d"
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  persistentVolume:
+    enabled: true
+    size: 30Gi
+    storageClass: "gp3"
+
+  nodeSelector:
+    x86: "true"
+
+  tolerations:
+    - key: "x86_only"
+      operator: "Equal"
+      value: "enabled"
+      effect: "NoSchedule"
+
+  service:
+    type: ClusterIP
+
+  global:
+    scrape_interval: 30s
+    evaluation_interval: 30s
+    external_labels:
+      cluster: "eks-dev"
+      environment: "dev"
+
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+    storageClass: "gp3"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+nodeExporter:
+  enabled: true
+
+pushgateway:
+  enabled: false
+
+kube-state-metrics:
+  enabled: true

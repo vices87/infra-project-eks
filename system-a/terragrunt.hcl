@@ -1,8 +1,9 @@
 locals {
-  env_vars    = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  account_id  = local.env_vars.locals.account_id
+  env_vars     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+
+  account_id  = local.account_vars.locals.account_id
+  role_arn    = local.account_vars.locals.role_arn
   region      = local.env_vars.locals.region
-  role_arn    = local.env_vars.locals.role_arn
   environment = local.env_vars.locals.environment
 }
 
@@ -14,7 +15,7 @@ remote_state {
   }
   config = {
     bucket         = "terraform-state-${local.account_id}"
-    key            = "${path_relative_to_include()}/terraform.tfstate"
+    key            = "${path_relative_to_include()}/terraform.tfstate" # salva no s3://terraform-state-123456789012/dev/eks/terraform.tfstate
     region         = local.region
     encrypt        = true
     dynamodb_table = "terraform-locks"
@@ -22,7 +23,7 @@ remote_state {
 }
 
 generate "provider_aws" {
-  path      = "provider_aws.tf"
+  path      = "providers.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
 provider "aws" {
