@@ -108,3 +108,34 @@ Visualização e monitoramento
 🔹 HPA
 
 🔹 metrics-server
+
+
+# Pré requisito - Configuração de OIDC para GitHub Actions na AWS
+
+Conta AWS:
+
+OIDC:
+
+O OIDC permite que o GitHub Actions assuma uma IAM Role temporária na AWS, sem necessidade de armazenar AWS_ACCESS_KEY_ID ou AWS_SECRET_ACCESS_KEY como secrets no repositório.
+
+Fluxo: 
+1. O GitHub gera um token OIDC temporário
+2. A AWS valida esse token através de um Identity Provider OIDC configurado na conta
+3. O GitHub Actions assume uma IAM Role específica
+4. O pipeline executa ações na AWS com credenciais temporárias.
+
+1️⃣ Criar o Identity Provider OIDC
+
+Na conta AWS, criar um Identity Provider apontando para:
+
+https://token.actions.githubusercontent.com
+
+Provider type: OpenID Connect
+
+2️⃣ Criar uma IAM Role para o GitHub Actions
+
+Criar uma IAM Role com:
+
+Trust policy permitindo o GitHub assumir a role
+
+Permissões necessárias para o projeto (ex: ECR, EKS, Terraform, etc.)
