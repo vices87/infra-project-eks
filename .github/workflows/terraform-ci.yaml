@@ -6,11 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Ambiente"
+        description: "Ambiente (ex: system-a/dev)"
         required: true
-        type: choice
-        options:
-          - system-a/dev
+        type: string
+        default: "system-a/dev"
       action:
         description: "Ação"
         required: true
@@ -41,7 +40,6 @@ jobs:
       - name: Lint
         run: tflint --recursive
 
-  # Roda plan em todo system-a/dev em cada PR
   plan:
     name: Plan
     needs: lint
@@ -64,7 +62,6 @@ jobs:
       - name: Plan
         run: terragrunt run-all plan --terragrunt-working-dir system-a/dev 2>&1
 
-  # Plan/Apply manual por ambiente
   apply:
     name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.environment }}"
     needs: lint
