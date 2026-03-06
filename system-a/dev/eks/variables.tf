@@ -4,6 +4,7 @@ variable "name" {
   default     = ""
 }
 
+
 variable "cluster_version" {
   description = "Versão do Kubernetes para o cluster EKS"
   type        = string

@@ -1,122 +1,158 @@
-
 name: Terraform CI/CD
 
 on:
+  pull_request:
+    branches: [main]
+
   workflow_dispatch:
     inputs:
+      directory:
+        description: "Diretório do módulo (ex: system-a/dev/eks)"
+        required: true
+        type: string
       action:
-        description: "Choose action"
+        description: "Ação"
         required: true
         type: choice
         options:
-          - lint
           - plan
           - apply
 
-jobs:
-  lint:
-    if: ${{ github.event.inputs.action == 'lint' }}
-    runs-on: ubuntu-latest
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
 
-    # usa a imagem criada no workflow build-runner
+jobs:
+
+  # ============================================================
+  # Lint - roda em todo PR automaticamente
+  # ============================================================
+  lint:
+    name: Lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
     steps:
-      # baixa o repo
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # # autenticação AWS via OIDC
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
-      #     aws-region: us-east-1
-
-      - name: Terraform init
-        run: terraform init -backend=false
-
-      # checa formatação
       - name: Terraform Format
         run: terraform fmt -check -recursive || true
 
-      # valida código terraform
-      - name: Terraform Validate
-        run: terraform validate
-
-      # inicializa regras do tflint
       - name: TFLint Init
         run: tflint --init
 
-      # lint terraform
       - name: TFLint Scan
-        run: tflint --chdir=system-a --recursive
+        run: tflint --recursive
 
-      # # security scan tfsec
-      # - name: tfsec scan
-      #   run: tfsec .
-
-      # # plan em pull requests
-      # - name: Terragrunt Plan
-      #   if: github.event_name == 'pull_request'
-      #   run: terragrunt run-all plan
-
-  plan:
-    needs: lint
-    if: ${{ github.event.inputs.action == 'plan' }}
+  # ============================================================
+  # Plan - roda em todo PR automaticamente (detecta dirs alterados)
+  # ============================================================
+  detect:
+    name: Detect changes
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.find.outputs.dirs }}
 
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find changed Terraform directories
+        id: find
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD \
+            | grep -E '\.tf$|terragrunt\.hcl$' \
+            | xargs -I{} dirname {} \
+            | sort -u)
+
+          DIRS=()
+          for dir in $CHANGED; do
+            if [ -f "$dir/main.tf" ] || [ -f "$dir/terragrunt.hcl" ]; then
+              DIRS+=("$dir")
+            fi
+          done
+
+          JSON=$(printf '%s\n' "${DIRS[@]}" | jq -R . | jq -sc .)
+          echo "dirs=$JSON" >> $GITHUB_OUTPUT
+
+  plan-pr:
+    name: "Plan: ${{ matrix.dir }}"
+    needs: detect
+    if: needs.detect.outputs.dirs != '[]' && needs.detect.outputs.dirs != ''
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
-    outputs:
-      plan-path: terraform.tfplan
+    strategy:
+      matrix:
+        dir: ${{ fromJson(needs.detect.outputs.dirs) }}
+      fail-fast: false
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # exemplo OIDC (se quiser ativar depois)
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/github-actions-role #exemplo
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
           aws-region: us-east-1
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Plan
+        id: plan
+        run: |
+          if [ -f "${{ matrix.dir }}/terragrunt.hcl" ]; then
+            terragrunt plan --terragrunt-working-dir ${{ matrix.dir }} 2>&1 | tee plan.txt
+          else
+            terraform -chdir=${{ matrix.dir }} init
+            terraform -chdir=${{ matrix.dir }} plan 2>&1 | tee plan.txt
+          fi
 
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
+      - name: Comment plan on PR
+        uses: actions/github-script@v7
+        if: always()
         with:
-          name: terraform-plan
-          path: terraform.tfplan
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('plan.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Plan: \`${{ matrix.dir }}\`\n\`\`\`\n${plan.slice(0, 65000)}\n\`\`\``
+            });
 
-  apply:
-    needs: plan
-    if: ${{ github.event.inputs.action == 'apply' }}
+  # ============================================================
+  # Plan/Apply manual - workflow_dispatch
+  # ============================================================
+  manual:
+    name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.directory }}"
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
-
-    environment: prod 
+    environment: ${{ github.event.inputs.action == 'apply' && 'production' || '' }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: terraform-plan
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+          aws-region: us-east-1
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Run ${{ github.event.inputs.action }}
+        run: |
+          DIR="${{ github.event.inputs.directory }}"
+          ACTION="${{ github.event.inputs.action }}"
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+          if [ -f "$DIR/terragrunt.hcl" ]; then
+            terragrunt $ACTION $( [ "$ACTION" = "apply" ] && echo "--auto-approve" ) \
+              --terragrunt-working-dir $DIR
+          else
+            terraform -chdir=$DIR init
+            terraform -chdir=$DIR $ACTION $( [ "$ACTION" = "apply" ] && echo "-auto-approve" )
+          fi
