@@ -30,7 +30,6 @@ variable "tags" {
 variable "cloudwatch_log_group" {
   description = "Create CW log group"
   type        = bool
-  default     = {}
 }
 
 variable "cluster_enabled_log_types" {
@@ -152,5 +151,4 @@ variable "enable_cluster_autoscaler" {
 variable "enable_irsa" {
   description = "Enables IRSA + OIDC"
   type        = bool
-  default     = {}
 }
