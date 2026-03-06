@@ -58,7 +58,7 @@ jobs:
 
       # lint terraform
       - name: TFLint Scan
-        run: tflint scan system-a
+        run: tflint --chdir=system-a --recursive
 
       # security scan tfsec
       - name: tfsec scan
