@@ -78,6 +78,7 @@ jobs:
       #   run: terragrunt run-all plan
 
   plan:
+    needs: lint
     if: ${{ github.event.inputs.action == 'plan' }}
     runs-on: ubuntu-latest
 
@@ -103,6 +104,7 @@ jobs:
 
 
   apply:
+    needs: plan
     if: ${{ github.event.inputs.action == 'apply' }}
     runs-on: ubuntu-latest
 
