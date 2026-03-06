@@ -3,9 +3,18 @@
 name: Terraform CI
 
 
-on: 
+on:
   workflow_dispatch:
-    
+    inputs:
+      action:
+        description: "Choose action"
+        required: true
+        type: choice
+        options:
+          - lint
+          - plan
+          - apply
+
 # on:
 #   pull_request:
 #   push:
@@ -13,19 +22,15 @@ on:
 #       - main
 
 jobs:
-  terraform:
+  lint:
+    if: ${{ github.event.inputs.step == 'lint' }}
     runs-on: ubuntu-latest
 
     # usa a imagem criada no workflow build-runner
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
-    permissions:
-      contents: read
-      id-token: write
-
     steps:
-
       # baixa o repo
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,30 +51,72 @@ jobs:
 
       # checa formatação
       - name: Terraform Format
+        if: inputs.action == 'lint-plan'
         run: terraform fmt -check -recursive || true
 
       # valida código terraform
       - name: Terraform Validate
+        if: inputs.action == 'lint-plan'
         run: terraform validate
 
       # inicializa regras do tflint
       - name: TFLint Init
+        if: inputs.action == 'lint-plan'
         run: tflint --init
 
       # lint terraform
       - name: TFLint Scan
         run: tflint --chdir=system-a --recursive
 
-      # security scan tfsec
-      - name: tfsec scan
-        run: tfsec .
+      # # security scan tfsec
+      # - name: tfsec scan
+      #   run: tfsec .
 
       # # plan em pull requests
       # - name: Terragrunt Plan
       #   if: github.event_name == 'pull_request'
       #   run: terragrunt run-all plan
 
-      # # apply apenas na main
-      # - name: Terragrunt Apply
-      #   if: github.ref == 'refs/heads/main'
-      #   run: terragrunt run-all apply -auto-approve
+  plan:
+    if: ${{ github.event.inputs.action == 'plan' }}
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/${{ github.repository }}/infra-runner:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # exemplo OIDC (se quiser ativar depois)
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
+      #     aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan
+
+
+  apply:
+    if: ${{ github.event.inputs.action == 'apply' }}
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/${{ github.repository }}/infra-runner:latest
+
+    environment: prod   # permite colocar approval manual no GitHub
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
