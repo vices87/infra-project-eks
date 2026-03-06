@@ -5,10 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      directory:
-        description: "Diretório (ex: system-a/dev/eks)"
+      environment:
+        description: "Ambiente"
         required: true
-        type: string
+        type: choice
+        options:
+          - system-a/dev
       action:
         description: "Ação"
         required: true
@@ -43,9 +45,9 @@ jobs:
       - name: Plan
         run: terragrunt run-all plan --terragrunt-working-dir system-a/dev 2>&1
 
-  # Apply manual num diretório específico
+  # Plan/Apply manual por ambiente
   apply:
-    name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.directory }}"
+    name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.environment }}"
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
@@ -63,4 +65,4 @@ jobs:
         run: |
           ACTION="${{ github.event.inputs.action }}"
           APPROVE=$( [ "$ACTION" = "apply" ] && echo "--auto-approve" )
-          terragrunt $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.directory }}"
+          terragrunt run-all $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.environment }}"
