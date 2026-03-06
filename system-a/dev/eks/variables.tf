@@ -39,16 +39,6 @@ variable "cluster_enabled_log_types" {
 }
 
 
-variable "assume_role_arn" {
-  description = "Assume role ARN"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "Region"
-  type        = string
-  default     = ""
-}
 
 variable "node_ami_type" {
   description = "Type of Amazon Machine Image (AMI) for the node group"

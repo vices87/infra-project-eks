@@ -1,9 +1,5 @@
 # DEV
 
-# Assume Role
-aws_region      = "sa-east-1"
-assume_role_arn = "aaa"
-
 # Cluster Config
 name                 = "eks-dev"
 cluster_version      = "1.31"
