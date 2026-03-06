@@ -57,10 +57,10 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate
-        run: terragrunt run-all validate --working-dir system-a/dev --non-interactive 2>&1
+        run: terragrunt run -- run-all validate --working-dir system-a/dev --non-interactive 2>&1
 
       - name: Plan
-        run: terragrunt run-all plan --working-dir system-a/dev --non-interactive 2>&1
+        run: terragrunt run -- run-all plan --working-dir system-a/dev --non-interactive 2>&1
 
   apply:
     name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.environment }}"
