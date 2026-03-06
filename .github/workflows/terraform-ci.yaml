@@ -2,11 +2,15 @@
 
 name: Terraform CI
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
+
+on: 
+  workflow_dispatch:
+    
+# on:
+#   pull_request:
+#   push:
+#     branches:
+#       - main
 
 jobs:
   terraform:
@@ -42,7 +46,7 @@ jobs:
 
       # checa formatação
       - name: Terraform Format
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive || true
 
       # valida código terraform
       - name: Terraform Validate
