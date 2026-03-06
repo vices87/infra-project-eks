@@ -1,4 +1,9 @@
-variable "cluster_name" {}
+variable "cluster_name" {
+
+    type = string
+  description = "Nome do cluster EKS"
+
+}
 
 data "aws_eks_cluster" "this" {
   name = var.cluster_name
