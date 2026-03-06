@@ -3,6 +3,7 @@ Projeto de infraestrutura como código (IaC) utilizando Terraform para provision
 
 # Estrutura de diretórios:
 
+```
 infra-project/
 ├── modules/
 │   └── network/
@@ -16,7 +17,7 @@ infra-project/
 │   ├── prod/
 │   └── stage/
 └── system-b/
-
+```
 ###
 
 # Arquitetura

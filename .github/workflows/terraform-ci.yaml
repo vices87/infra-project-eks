@@ -1,3 +1,6 @@
+
+
+
 name: Terraform CI
 
 on:
@@ -7,49 +10,63 @@ on:
       - main
 
 jobs:
-  terragrunt:
+  terraform:
     runs-on: ubuntu-latest
 
+    # usa a imagem criada no workflow build-runner
     container:
-      image: ghcr.io/vices87/infra-project-eks/terraform-runner:latest
+      image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
     permissions:
-      id-token: write
       contents: read
-
-    defaults:
-      run:
-        working-directory: live/dev
+      id-token: write
 
     steps:
-      - name: Checkout
+
+      # baixa o repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
-          aws-region: us-east-1
+      # # autenticação AWS via OIDC
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
+      #     aws-region: us-east-1
 
+      # # inicializa terraform/terragrunt
+      # - name: Terragrunt Init
+      #   run: terragrunt run-all init
+
+      - name: Terraform init
+        run: terraform init -backend=false
+        
+      # checa formatação
       - name: Terraform Format
         run: terraform fmt -check -recursive
 
-      - name: Terragrunt Init
-        run: terragrunt run-all init
-
+      # valida código terraform
       - name: Terraform Validate
-        run: terragrunt run-all validate
+        run: terraform validate
 
+      # inicializa regras do tflint
       - name: TFLint Init
         run: tflint --init
 
-      - name: TFLint
+      # lint terraform
+      - name: TFLint Scan
         run: tflint --recursive
 
-      - name: Terragrunt Plan
-        if: github.event_name == 'pull_request'
-        run: terragrunt run-all plan
+      # security scan tfsec
+      - name: tfsec scan
+        run: tfsec .
 
-      - name: Terragrunt Apply
-        if: github.ref == 'refs/heads/main'
-        run: terragrunt run-all apply -auto-approve
+      # # plan em pull requests
+      # - name: Terragrunt Plan
+      #   if: github.event_name == 'pull_request'
+      #   run: terragrunt run-all plan
+
+      # # apply apenas na main
+      # - name: Terragrunt Apply
+      #   if: github.ref == 'refs/heads/main'
+      #   run: terragrunt run-all apply -auto-approve
