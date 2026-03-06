@@ -24,3 +24,5 @@ secrets.tfvars
 # OS
 .DS_Store
 Thumbs.db
+
+.claude
