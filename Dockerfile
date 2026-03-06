@@ -4,10 +4,10 @@ FROM alpine:3.19
 
 # variaveis de versão das ferramentas (facilitar upgrade)
 
-ARG TERRAFORM_VERSION=1.7.5
-ARG TERRAGRUNT_VERSION=0.55.3
-ARG KUBECTL_VERSION=v1.29.0
-ARG HELM_VERSION=v3.14.0
+ARG TERRAFORM_VERSION=1.14.0
+ARG TERRAGRUNT_VERSION=0.69.0
+ARG KUBECTL_VERSION=v1.32.0
+ARG HELM_VERSION=v3.17.0
 
 # Instalacao dependencias do runner
 # execução de scripts e ferramentas CLI
