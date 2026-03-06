@@ -57,10 +57,10 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate
-        run: terragrunt run-all validate --terragrunt-working-dir system-a/dev 2>&1
+        run: terragrunt run-all validate --terragrunt-working-dir system-a/dev --terragrunt-non-interactive 2>&1
 
       - name: Plan
-        run: terragrunt run-all plan --terragrunt-working-dir system-a/dev 2>&1
+        run: terragrunt run-all plan --terragrunt-working-dir system-a/dev --terragrunt-non-interactive 2>&1
 
   apply:
     name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.environment }}"
@@ -79,10 +79,10 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate
-        run: terragrunt run-all validate --terragrunt-working-dir "${{ github.event.inputs.environment }}" 2>&1
+        run: terragrunt run-all validate --terragrunt-working-dir "${{ github.event.inputs.environment }}" --terragrunt-non-interactive 2>&1
 
       - name: Run
         run: |
           ACTION="${{ github.event.inputs.action }}"
           APPROVE=$( [ "$ACTION" = "apply" ] && echo "--auto-approve" )
-          terragrunt run-all $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.environment }}" 2>&1
+          terragrunt run-all $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.environment }}" --terragrunt-non-interactive 2>&1
