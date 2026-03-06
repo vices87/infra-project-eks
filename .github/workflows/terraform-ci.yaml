@@ -23,7 +23,7 @@ on:
 
 jobs:
   lint:
-    if: ${{ github.event.inputs.step == 'lint' }}
+    if: ${{ github.event.inputs.action == 'lint' }}
     runs-on: ubuntu-latest
 
     # usa a imagem criada no workflow build-runner
@@ -51,17 +51,14 @@ jobs:
 
       # checa formatação
       - name: Terraform Format
-        if: inputs.action == 'lint-plan'
         run: terraform fmt -check -recursive || true
 
       # valida código terraform
       - name: Terraform Validate
-        if: inputs.action == 'lint-plan'
         run: terraform validate
 
       # inicializa regras do tflint
       - name: TFLint Init
-        if: inputs.action == 'lint-plan'
         run: tflint --init
 
       # lint terraform
