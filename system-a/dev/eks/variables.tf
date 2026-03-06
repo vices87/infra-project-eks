@@ -1,13 +1,13 @@
 variable "name" {
   description = "Nome do cluster EKS"
   type        = string
-  default = ""
+  default     = ""
 }
 
 variable "cluster_version" {
   description = "Versão do Kubernetes para o cluster EKS"
   type        = string
-  default = "1.33"
+  default     = "1.33"
 }
 
 variable "public_access" {
@@ -42,14 +42,14 @@ variable "cluster_enabled_log_types" {
 
 variable "assume_role_arn" {
   description = "Assume role ARN"
-  type = string
-  default = ""
+  type        = string
+  default     = ""
 }
 
 variable "aws_region" {
   description = "Region"
-  type = string
-  default = ""
+  type        = string
+  default     = ""
 }
 
 variable "node_ami_type" {
@@ -151,6 +151,6 @@ variable "enable_cluster_autoscaler" {
 
 variable "enable_irsa" {
   description = "Enables IRSA + OIDC"
-  type = bool
-  default = {}
+  type        = bool
+  default     = {}
 }
