@@ -3,7 +3,7 @@ module "eks" {
   version = "21.15.1"
 
   # Config EKS
-  name                   = var.name
+  name                   = var.cluster_name
   kubernetes_version     = var.cluster_version
   endpoint_public_access = var.public_access
 
@@ -70,7 +70,7 @@ module "eks" {
   # Config for nodes groups
   eks_managed_node_groups = {
 
-    "${var.name}-x86" = {
+    "${var.cluster_name}-x86" = {
       ami_type        = var.node_ami_type
       min_size        = var.node_min_size
       max_size        = var.node_max_size

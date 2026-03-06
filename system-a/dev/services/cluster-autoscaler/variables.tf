@@ -3,6 +3,7 @@ variable "cluster_name" {
   type        = string
 }
 
+
 variable "namespace" {
   description = "Namespace do Kubernetes"
   type        = string

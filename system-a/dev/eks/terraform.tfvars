@@ -2,6 +2,7 @@
 
 # Cluster Config
 name                 = "eks-dev"
+cluster_name = "eks-dev"
 cluster_version      = "1.31"
 public_access        = false
 cloudwatch_log_group = true

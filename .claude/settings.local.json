@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i '/^variable \"\"cluster_name\"\" {/,/^}/d' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\cluster-autoscaler\\\\variables.tf\")",
+      "Bash(sed -i '/^$/N;/^\\\\n$/d' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\cluster-autoscaler\\\\variables.tf\")",
+      "Bash(sed -i '/^variable \"\"cluster_name\"\" {/,/^}/d' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\metrics-server\\\\variables.tf\")",
+      "Bash(sed -i '/^$/N;/^\\\\n$/d' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\metrics-server\\\\variables.tf\")",
+      "Bash(sed -i '1s/^/variable \"\"cluster_name\"\" {\\\\n  description = \"\"Nome do cluster EKS\"\"\\\\n  type        = string\\\\n}\\\\n\\\\n/' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\cluster-autoscaler\\\\variables.tf\")",
+      "Bash(sed -i '1s/^/variable \"\"cluster_name\"\" {\\\\n  description = \"\"Nome do cluster EKS\"\"\\\\n  type        = string\\\\n}\\\\n\\\\n/' \"c:\\\\Users\\\\vcmcs\\\\Desktop\\\\infra-project\\\\system-a\\\\dev\\\\services\\\\metrics-server\\\\variables.tf\")"
+    ]
+  }
+}
