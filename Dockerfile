@@ -5,7 +5,7 @@ FROM alpine:3.19
 # variaveis de versão das ferramentas (facilitar upgrade)
 
 ARG TERRAFORM_VERSION=1.14.6
-ARG TERRAGRUNT_VERSION=v0.99.2
+ARG TERRAGRUNT_VERSION=0.99.2
 ARG KUBECTL_VERSION=v1.32.0
 ARG HELM_VERSION=v3.17.0
 
