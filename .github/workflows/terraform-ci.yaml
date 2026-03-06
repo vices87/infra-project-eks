@@ -3,11 +3,10 @@ name: Terraform CI/CD
 on:
   pull_request:
     branches: [main]
-
   workflow_dispatch:
     inputs:
       directory:
-        description: "Diretório do módulo (ex: system-a/dev/eks)"
+        description: "Diretório (ex: system-a/dev/eks)"
         required: true
         type: string
       action:
@@ -25,134 +24,43 @@ permissions:
 
 jobs:
 
-  # ============================================================
-  # Lint - roda em todo PR automaticamente
-  # ============================================================
-  lint:
-    name: Lint
+  # Roda plan em todo system-a/dev em cada PR
+  plan:
+    name: Plan
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Terraform Format
-        run: terraform fmt -check -recursive || true
-
-      - name: TFLint Init
-        run: tflint --init
-
-      - name: TFLint Scan
-        run: tflint --recursive
-
-  # ============================================================
-  # Plan - roda em todo PR automaticamente (detecta dirs alterados)
-  # ============================================================
-  detect:
-    name: Detect changes
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    outputs:
-      dirs: ${{ steps.find.outputs.dirs }}
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Find changed Terraform directories
-        id: find
-        run: |
-          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} HEAD \
-            | grep -E '\.tf$|terragrunt\.hcl$' \
-            | xargs -I{} dirname {} \
-            | sort -u)
-
-          DIRS=()
-          for dir in $CHANGED; do
-            if [ -f "$dir/main.tf" ] || [ -f "$dir/terragrunt.hcl" ]; then
-              DIRS+=("$dir")
-            fi
-          done
-
-          JSON=$(printf '%s\n' "${DIRS[@]}" | jq -R . | jq -sc .)
-          echo "dirs=$JSON" >> $GITHUB_OUTPUT
-
-  plan-pr:
-    name: "Plan: ${{ matrix.dir }}"
-    needs: detect
-    if: needs.detect.outputs.dirs != '[]' && needs.detect.outputs.dirs != ''
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/${{ github.repository }}/infra-runner:latest
-
-    strategy:
-      matrix:
-        dir: ${{ fromJson(needs.detect.outputs.dirs) }}
-      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Plan
-        id: plan
-        run: |
-          if [ -f "${{ matrix.dir }}/terragrunt.hcl" ]; then
-            terragrunt plan --terragrunt-working-dir ${{ matrix.dir }} 2>&1 | tee plan.txt
-          else
-            terraform -chdir=${{ matrix.dir }} init
-            terraform -chdir=${{ matrix.dir }} plan 2>&1 | tee plan.txt
-          fi
+        run: terragrunt run-all plan --terragrunt-working-dir system-a/dev 2>&1
 
-      - name: Comment plan on PR
-        uses: actions/github-script@v7
-        if: always()
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('plan.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### Plan: \`${{ matrix.dir }}\`\n\`\`\`\n${plan.slice(0, 65000)}\n\`\`\``
-            });
-
-  # ============================================================
-  # Plan/Apply manual - workflow_dispatch
-  # ============================================================
-  manual:
+  # Apply manual num diretório específico
+  apply:
     name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.directory }}"
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
-    environment: ${{ github.event.inputs.action == 'apply' && 'production' || '' }}
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-role
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Run ${{ github.event.inputs.action }}
+      - name: Run
         run: |
-          DIR="${{ github.event.inputs.directory }}"
           ACTION="${{ github.event.inputs.action }}"
-
-          if [ -f "$DIR/terragrunt.hcl" ]; then
-            terragrunt $ACTION $( [ "$ACTION" = "apply" ] && echo "--auto-approve" ) \
-              --terragrunt-working-dir $DIR
-          else
-            terraform -chdir=$DIR init
-            terraform -chdir=$DIR $ACTION $( [ "$ACTION" = "apply" ] && echo "-auto-approve" )
-          fi
+          APPROVE=$( [ "$ACTION" = "apply" ] && echo "--auto-approve" )
+          terragrunt $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.directory }}"

@@ -6,6 +6,6 @@ output "dynamodb_table" {
   value = aws_dynamodb_table.terraform_locks.name
 }
 
-output "terraform_role_arn" {
-  value = aws_iam_role.terraform_deploy.arn
+output "github_actions_role_arn" {
+  value = aws_iam_role.github_actions.arn
 }

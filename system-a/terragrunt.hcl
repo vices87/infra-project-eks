@@ -2,8 +2,8 @@ locals {
   env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
 
   account_id  = local.env_vars.locals.account_id
-  role_arn    = local.env_vars.locals.role_arn
   region      = local.env_vars.locals.region
+  role_arn    = local.env_vars.locals.role_arn
   environment = local.env_vars.locals.environment
 }
 
