@@ -76,12 +76,6 @@ variable "node_capacity_type" {
   default     = "SPOT"
 }
 
-variable "node_max_pods" {
-  description = "Maximum number of pods per node"
-  type        = number
-  default     = 110
-}
-
 variable "node_disk_size" {
   description = "Disk size in GB for node group instances"
   type        = number
@@ -94,11 +88,11 @@ variable "node_disk_type" {
   default     = "gp3"
 }
 
-variable "eks_managed_node_groups" {
-  description = "Map of EKS managed node group definitions"
-  type        = any
-  default     = {}
-}
+# variable "eks_managed_node_groups" {
+#   description = "Map of EKS managed node group definitions"
+#   type        = any
+#   default     = {}
+# }
 
 variable "node_labels" {
   description = "Labels para o node group"
@@ -117,11 +111,6 @@ variable "create_node_iam_role" {
   default     = false
 }
 
-variable "node_iam_role_arn" {
-  description = "ARN of existing IAM role for nodes (if create_node_iam_role is false)"
-  type        = string
-  default     = null
-}
 
 
 variable "cluster_addons" {

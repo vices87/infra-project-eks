@@ -1,30 +1,17 @@
-
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.eks.token
-  }
-}
-
+# Cluster Autoscaler - Chart Helm Oficial
 resource "helm_release" "cluster_autoscaler" {
-  name       = "cluster-autoscaler"
-  repository = "https://kubernetes.github.io/autoscaler"
-  chart      = "cluster-autoscaler"
-  namespace  = "kube-system"
-  version    = "9.29.0"
+  name             = var.release_name
+  repository       = "https://kubernetes.github.io/autoscaler"
+  chart            = "cluster-autoscaler"
+  version          = var.chart_version
+  namespace        = var.namespace
+  create_namespace = var.create_namespace
+
+  wait          = true
+  wait_for_jobs = true
+  timeout       = 600
 
   values = [
-    file("${path.module}/values.yaml")
+    file("${path.module}/values.yaml"),
   ]
-
-  set {
-    name  = "autoDiscovery.clusterName"
-    value = module.eks.cluster_name
-  }
-
-  set {
-    name  = "awsRegion"
-    value = var.aws_region
-  }
 }

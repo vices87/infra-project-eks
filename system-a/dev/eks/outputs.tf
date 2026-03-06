@@ -67,3 +67,5 @@ output "oidc_provider_arn" {
   description = "ARN do OIDC provider do cluster"
   value       = module.eks.oidc_provider_arn
 }
+
+

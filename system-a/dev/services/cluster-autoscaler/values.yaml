@@ -1,6 +1,7 @@
 autoDiscovery:
-  clusterName: ""   
-awsRegion: ""       
+  clusterName: "eks-dev"
+
+awsRegion: "us-east-1"
 
 rbac:
   serviceAccount:

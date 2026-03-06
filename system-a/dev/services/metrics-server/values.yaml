@@ -1,0 +1,19 @@
+resources:
+  requests:
+    cpu: 100m
+    memory: 200Mi
+  limits:
+    cpu: 200m
+    memory: 400Mi
+
+nodeSelector:
+  x86: "true"
+
+tolerations:
+  - key: "x86_only"
+    operator: "Equal"
+    value: "enabled"
+    effect: "NoSchedule"
+
+metrics:
+  enabled: true

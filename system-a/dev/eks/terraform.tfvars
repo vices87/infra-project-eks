@@ -44,7 +44,6 @@ node_disk_size      = 50
 node_disk_type      = "gp3"
 
 create_node_iam_role = false
-node_iam_role_arn    = "arn:aws:iam::123456789:role/eks-node-role"
 
 
 node_labels = {
