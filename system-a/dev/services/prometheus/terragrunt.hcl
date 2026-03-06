@@ -8,6 +8,6 @@ dependency "eks" {
 }
 
 inputs = {
-  cluster_name = var.cluster_name
+  cluster_name = local.cluster_name
 
 }
