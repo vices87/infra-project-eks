@@ -1,8 +1,3 @@
-variable "aws_region" {
-  description = "AWS Region"
-  type        = string
-}
-
 variable "cluster_name" {
   description = "Nome do cluster EKS"
   type        = string
@@ -18,11 +13,6 @@ variable "create_namespace" {
   description = "Criar namespace automaticamente"
   type        = bool
   default     = true
-}
-
-variable "environment" {
-  description = "Nome do ambiente (dev, stage, prod)"
-  type        = string
 }
 
 variable "release_name" {
