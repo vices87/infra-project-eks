@@ -3,7 +3,7 @@ include "root" {
 }
 
 dependency "eks" {
-  config_path = "${path_relative_from_include()}/../eks"
+  config_path = "../../eks"
 }
 
 inputs = {
