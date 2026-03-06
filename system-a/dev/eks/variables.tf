@@ -16,6 +16,11 @@ variable "public_access" {
   default     = false
 }
 
+# variable "key_name" {
+#   description = "Nome do Key Pair EC2 para acesso SSH aos nodes"
+#   type        = string
+# }
+
 variable "tags" {
   description = "Tags padrão a serem aplicadas em todos os recursos"
   type        = map(string)

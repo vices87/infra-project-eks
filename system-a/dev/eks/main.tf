@@ -53,7 +53,7 @@ module "eks" {
 
     # Com policy gerenciada da AWS:
     infra_sre = {
-      principal_arn = data.aws_iam_role.infra_sre.arn
+      principal_arn = data.aws_iam_roles.infra_sre.arn
       policy_associations = {
         exemplo = {
           policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"

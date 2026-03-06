@@ -1,7 +1,4 @@
 
-data "aws_caller_identity" "current" {}
-
-
 data "aws_vpc" "selected" {
   tags = {
     Name = var.name
@@ -19,25 +16,12 @@ data "aws_subnets" "selected" {
   }
 }
 
-data "aws_iam_role" "admin" {
-  name = "admin"
-}
-
-data "aws_iam_role" "production" {
-  name = "${var.name}-production"
-}
-
 data "aws_iam_roles" "infra_sre" {
   name_regex = "infra-sre.*"
 }
 
 data "aws_iam_role" "iam_node_role" {
   name = "${var.name}-node-role"
-}
-
-
-data "aws_iam_users" "azure" {
-  name_regex = "azure-devops.*"
 }
 
 
