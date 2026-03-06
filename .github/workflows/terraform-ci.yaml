@@ -26,9 +26,25 @@ permissions:
 
 jobs:
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}/infra-runner:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Format
+        run: terraform fmt -check -recursive || true
+
+      - name: Lint
+        run: tflint --recursive
+
   # Roda plan em todo system-a/dev em cada PR
   plan:
     name: Plan
+    needs: lint
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     container:
@@ -42,12 +58,16 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Validate
+        run: terragrunt run-all validate --terragrunt-working-dir system-a/dev 2>&1
+
       - name: Plan
         run: terragrunt run-all plan --terragrunt-working-dir system-a/dev 2>&1
 
   # Plan/Apply manual por ambiente
   apply:
     name: "${{ github.event.inputs.action }}: ${{ github.event.inputs.environment }}"
+    needs: lint
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container:
@@ -61,8 +81,11 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
+      - name: Validate
+        run: terragrunt run-all validate --terragrunt-working-dir "${{ github.event.inputs.environment }}" 2>&1
+
       - name: Run
         run: |
           ACTION="${{ github.event.inputs.action }}"
           APPROVE=$( [ "$ACTION" = "apply" ] && echo "--auto-approve" )
-          terragrunt run-all $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.environment }}"
+          terragrunt run-all $ACTION $APPROVE --terragrunt-working-dir "${{ github.event.inputs.environment }}" 2>&1
