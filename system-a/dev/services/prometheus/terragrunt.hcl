@@ -1,14 +1,11 @@
-locals {
-  env     = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  account = read_terragrunt_config(find_in_parent_folders("account.hcl"))
-}
-
 include "root" {
   path = find_in_parent_folders()
 }
 
+dependency "eks" {
+  config_path = "${path_relative_from_include()}/../eks"
+}
+
 inputs = {
-  aws_region   = local.env.locals.region
-  cluster_name = local.env.locals.cluster_name
-  environment  = local.env.locals.environment
+  cluster_name = dependency.eks.outputs.cluster_name
 }

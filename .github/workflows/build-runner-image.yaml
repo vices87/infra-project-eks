@@ -1,0 +1,54 @@
+# pipeline usado para buildar imagem do runner quando dockerfile for alterado
+
+name: Build Infra Runner Image
+
+# trigger  Só executa quando o Dockerfile mudar
+on:
+  push:
+    paths:
+      - Dockerfile
+
+jobs:
+  build:
+    # Runner do GitHub onde o job será executado
+    runs-on: ubuntu-latest
+
+    # Permissões necessárias para acessar o repo e publicar imagem no GitHub Container Registry
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # Baixa o código do repositório para o runner
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Login no GitHub Container Registry (GHCR) para subir a imagem
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Gera automaticamente metadata da imagem (tags, labels etc)
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/infra-runner
+          tags: |
+            # cria tag "latest"
+            type=raw,value=latest
+
+            # cria tag baseada no commit SHA
+            type=sha
+
+
+      # Builda e publica a imagem
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
