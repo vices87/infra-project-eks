@@ -2,7 +2,7 @@
 
 # Assume Role
 aws_region      = "sa-east-1"
-assume_role_arn = ""
+assume_role_arn = "aaa"
 
 # Cluster Config
 name                 = "eks-dev"

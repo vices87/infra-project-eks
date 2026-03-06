@@ -42,7 +42,6 @@ variable "cluster_enabled_log_types" {
 variable "assume_role_arn" {
   description = "Assume role ARN"
   type        = string
-  default     = ""
 }
 
 variable "aws_region" {
