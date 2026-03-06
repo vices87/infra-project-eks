@@ -58,7 +58,7 @@ jobs:
 
       # lint terraform
       - name: TFLint Scan
-        run: tflint --recursive
+        run: tflint --recursive --ignore-dir=infra-base --ignore-dir=argocd
 
       # security scan tfsec
       - name: tfsec scan

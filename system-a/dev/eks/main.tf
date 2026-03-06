@@ -83,9 +83,6 @@ module "eks" {
         additional = aws_iam_policy.additional.arn,
       }
 
-      # key pair para SSH, melhor usar SSM
-      # key_name       = var.key_name
-
       block_device_mappings = {
         xvda = {
           device_name = "/dev/xvda"
