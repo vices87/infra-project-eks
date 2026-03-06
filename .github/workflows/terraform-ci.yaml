@@ -1,7 +1,5 @@
 
-
-name: Terraform CI
-
+name: Terraform CI/CD
 
 on:
   workflow_dispatch:
@@ -14,12 +12,6 @@ on:
           - lint
           - plan
           - apply
-
-# on:
-#   pull_request:
-#   push:
-#     branches:
-#       - main
 
 jobs:
   lint:
@@ -41,10 +33,6 @@ jobs:
       #   with:
       #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
       #     aws-region: us-east-1
-
-      # # inicializa terraform/terragrunt
-      # - name: Terragrunt Init
-      #   run: terragrunt run-all init
 
       - name: Terraform init
         run: terraform init -backend=false
@@ -82,16 +70,19 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
+    outputs:
+      plan-path: terraform.tfplan
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # exemplo OIDC (se quiser ativar depois)
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: arn:aws:iam::123456789012:role/github-actions-role
-      #     aws-region: us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/github-actions-role #exemplo
+          aws-region: us-east-1
 
       - name: Terraform Init
         run: terraform init
@@ -99,6 +90,11 @@ jobs:
       - name: Terraform Plan
         run: terraform plan
 
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform.tfplan
 
   apply:
     needs: plan
@@ -108,11 +104,16 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}/infra-runner:latest
 
-    environment: prod   # permite colocar approval manual no GitHub
+    environment: prod 
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
 
       - name: Terraform Init
         run: terraform init
