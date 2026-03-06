@@ -1,3 +1,15 @@
+
+
+primeiro passo criar contas na aws manualmente
+
+criar um user programatico com admin access
+
+gerar access key e exportar no wsl
+
+rodar o bootstrap para criar bucket s3 de statefiles, dynamodb table para state lock e role que vai ser usada pelo pipeline pra rodar o terraform 
+
+
+
 # Infra Project - AWS EKS multi-environment
 Projeto de infraestrutura como código (IaC) utilizando Terraform para provisionamento de ambientes na AWS com foco em EKS, organização por sistemas e separação por ambientes (dev, stage, prod).
 
