@@ -1,39 +1,74 @@
-name: register-eks-in-argocd
+name: Register EKS in ArgoCD
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente (ex: system-a/dev)"
+        required: true
+        type: string
+        default: "system-a/dev"
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   register:
+    name: "Register ${{ github.event.inputs.environment }}"
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository }}/infra-runner:latest
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      # Assume Role na conta do EKS
-      - name: Assume Role in EKS account
-        uses: aws-actions/configure-aws-credentials@v4
+      # Lê cluster_name, region e role_arn direto do env.hcl do ambiente
+      - name: Read env.hcl
+        id: env
+        run: |
+          ENV_FILE="${{ github.event.inputs.environment }}/env.hcl"
+          extract() { grep "$1" "$ENV_FILE" | sed 's/.*=\s*"\(.*\)".*/\1/'; }
+          echo "cluster_name=$(extract cluster_name)" >> $GITHUB_OUTPUT
+          echo "region=$(extract region)"             >> $GITHUB_OUTPUT
+          echo "role_arn=$(extract role_arn)"         >> $GITHUB_OUTPUT
+
+      # Autentica via OIDC (role central com permissao de assumir roles)
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::<ACCOUNT_B>:role/EKSAccessRole
-          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ steps.env.outputs.region }}
 
+      # Assume a role da conta do EKS (definida no env.hcl)
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.env.outputs.role_arn }}
+          aws-region: ${{ steps.env.outputs.region }}
+          role-chaining: true
+
+      # Gera kubeconfig para o cluster
       - name: Get kubeconfig
         run: |
-          aws eks update-kubeconfig --name eks-dev --region ${{ env.AWS_REGION }}
+          aws eks update-kubeconfig \
+            --name "${{ steps.env.outputs.cluster_name }}" \
+            --region "${{ steps.env.outputs.region }}"
 
-      # Assume Role na conta do ArgoCD
-      - name: Assume Role in ArgoCD account
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::1111111111:role/ArgoCDAdminRole #role fixa pois argocd centralizado em uma conta
-          aws-region: us-east-1 # fixo
-
-      - name: Register cluster in ArgoCD
+      # Login no ArgoCD (conta centralizada) via token
+      - name: Login ArgoCD
         run: |
-          argocd cluster add $(kubectl config current-context) --yes
+          argocd login "${{ secrets.ARGOCD_SERVER }}" \
+            --auth-token "${{ secrets.ARGOCD_TOKEN }}" \
+            --grpc-web \
+            --skip-test-tls
 
+      # Registra o cluster no ArgoCD
+      - name: Register cluster
+        run: |
+          argocd cluster add "$(kubectl config current-context)" \
+            --name "${{ steps.env.outputs.cluster_name }}" \
+            --yes
+
+      # Sync do app-of-apps para aplicar as apps do cluster
       - name: Sync App-of-Apps
         run: |
-          argocd app sync infra-root
+          argocd app sync infra-root --async
